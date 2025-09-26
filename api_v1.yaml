@@ -1,0 +1,248 @@
+openapi: '3.0.3'
+info:
+  title: API Title
+  version: '1.0'
+servers:
+  - url: https://api.server.test/v1
+
+paths:
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Получить пользователя по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор пользователя
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Пользователь найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                example1:
+                  value:
+                    id: 5
+                    name: "Иван"
+                    email: "ivan@example.com"
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                nf:
+                  value:
+                    error: "not_found"
+                    message: "User 5 not found"
+
+  /users:
+    post:
+      tags: [Users]
+      summary: Создать нового пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+            examples:
+              example1:
+                value:
+                  name: "Андрей"
+                  email: "andrey@example.com"
+      responses:
+        '201':
+          description: Пользователь успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                created:
+                  value:
+                    id: 10
+                    name: "Андрей"
+                    email: "andrey@example.com"
+
+  # -------- DEVICES --------
+
+  /devices/{id}:
+    get:
+      tags: [Devices]
+      summary: Получить устройство по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Device' }
+              examples:
+                ok:
+                  value:
+                    id: 123
+                    serial_number: "SN12345"
+                    status: "online"
+                    type_id: 1
+                    house_id: 10
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+    patch:
+      tags: [Devices]
+      summary: Частично обновить устройство. Доступно status или name
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeviceUpdate' }
+            examples:
+              turnOn:
+                value: { status: "online" }
+              rename:
+                value: { name: "Термометр спальня" }
+      responses:
+        '200':
+          description: Обновлённое устройство
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Device' }
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /devices/{id}/commands:
+    post:
+      tags: [Devices]
+      summary: Отправить команду устройству
+      description: Создаёт команду для устройства. Результат выполнения может быть обработан отдельно (не в рамках этого запроса).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommandRequest' }
+            examples:
+              setTemp:
+                value:
+                  command: "set_temperature"
+                  arguments: { value: 22.5 }
+              turnOn:
+                value:
+                  command: "turn_on"
+      responses:
+        '202':
+          description: Команда принята к обработке
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommandReceipt' }
+              examples:
+                accepted:
+                  value:
+                    command_id: "cmd-001"
+                    status: "accepted"
+                    queued_at: "2025-09-25T10:00:00Z"
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+components:
+  schemas:
+    # ---- Users ----
+    User:
+      type: object
+      properties:
+        id:   { type: integer }
+        name: { type: string }
+        email:{ type: string }
+      required: [id, name, email]
+
+    UserCreate:
+      type: object
+      properties:
+        name:  { type: string }
+        email: { type: string }
+      required: [name, email]
+
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error:   { type: string }
+        message: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+
+    # ---- Devices ----
+    Device:
+      type: object
+      required: [id, serial_number, status, type_id, house_id]
+      properties:
+        id:            { type: integer }
+        serial_number: { type: string }
+        status:
+          type: string
+          enum: [online, offline, error]
+        type_id:       { type: integer }
+        house_id:      { type: integer }
+        name:          { type: string, nullable: true }
+
+    DeviceUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [online, offline, error]
+        name:
+          type: string
+      minProperties: 1
+
+    CommandRequest:
+      type: object
+      required: [command]
+      properties:
+        command:
+          type: string
+          enum: [set_temperature, open_gate, close_gate, turn_on, turn_off, reboot]
+        arguments:
+          type: object
+          additionalProperties: true
+          description: Произвольные параметры команды (зависят от типа устройства)
+
+    CommandReceipt:
+      type: object
+      required: [command_id, status, queued_at]
+      properties:
+        command_id: { type: string }
+        status:     { type: string, enum: [accepted] }
+        queued_at:  { type: string, format: date-time }

@@ -8,7 +8,7 @@
 
 Чтобы составить документ с описанием текущей архитектуры приложения, можно часть информации взять из описания компании и условия задания. Это нормально.
 
-</aside
+</aside>
 
 ### 1. Описание функциональности монолитного приложения
 
@@ -76,13 +76,6 @@
   * Контекст: Правила и расписания
   * Контекст: Шаблонные сценариев
 
-Домен: Подключение и регистрация устройств
-* Поддомен: Подключение и инвентаризация устройств
-  * Контекст: Подключение устройств
-  * Контекст: Реестр устройств
-* Поддомен: Телеметрия
-  * Контекст: Сбор и хранение телеметрии
-
 Домен: Управление пользователями и подписками
 * Поддомен: Управление пользователями
   * Контекст: Управление пользователями и доступом (аутедификация + авторизация)
@@ -90,7 +83,6 @@
   * Контекст: Управление подписками
 * Поддомен: Платежи
   * Контекст: Обработка платежей
-
 
 
 ### **4. Проблемы монолитного решения**
@@ -123,24 +115,28 @@
 
 Чтобы добавить ссылку в файл Readme.md, нужно использовать синтаксис Markdown. Это делают так:
 
-[Тёлый-дом. Диаграмма контекста](https://www.plantuml.com/plantuml/uml/nLJBRYD55DttLnHUsGAxDH4hsCmm81Xf1fd9i8vwxDROKZ-iVWWiX1GdZ08o8aJA8WiU8bcowIHsqdQtRIbVSEiN-19EtNBIITn18f50ewcEwpxEkRVElO_3o0gYs7KCuvskrtBYjXq7ZkX4KI_ym3G3wwl6csxKYL_7eHsqV2-olQZHybtpPRTb1Mt_ywxTintpwVlrfcDvqPSldfkk5KPsWAkDfxxRypqLqME4g1ivjg13kKSBokIG9e96DATS_BMvBsYVKaheL6xYpF4l4JI5TIQtQ4nJES0t4TKdOVrPA6261VypIkLMpJ2QTX3wNbNHV4zKw7TbaZ_IERudb70A_Auesu4S07zfbziqbbi2JcCwDZdjCQLicsc62n321Gndy9a1RrVHpl11y0XaCnGqOpQdDCSbXoH8cHK1Sr2O0tPvXJCNbEhiSn3AbOSA4ymrX-jO_SJbjjoKmqQbTbbZryEZEOukz03PD2-ur-7BRM8o9_8704qhb_qOqHHKVv8xb73DG4tXpd1o2Dv2EJ2t6VSQMN3aS6OlKKNA8QpdDAfTunF6lPuVH0NCYAcV8Ljo1PvpTpGmBKfVPvVo3mLtxfZRjMIvmzc0Ad0pGgAKPdLrg32qvZlO9dAW21dhVMZFtVZ8Zxss5VIhOJzK1Fue2aL55t-MIF0YgzJ4DuOGEaLLVrxudkz0_oh9BzSLnt-DIyH1OrNofxvuLpJzC7eJsEjVF6y8K52CtwhNPgqaIXG9wB-bL0jSlpGbS3ug58Ike0jtwsUkNUNtk3lHBIjNqBPgqBV6LOy--JggTdpNtdYaYZjI_M5o4-uKKd7w4SVlA1rHoXBXRi7wY9_sK66mU175laF4bT05-6tWjVi1hpqOsBiViFSGuARLTx49GpqF6GVkqTdr9SEpG1CzFepr6p9bV0V5w-GQaCLklBITvS9RKMiXeO8GYbcjMSrJvHysfXoeFe3YnrROUUrZvmCQmCKMAaF_5GaqL5BeqgJ5wXPYx9ylvrhFgLOj1w8zgzZ5nbb1Njr0TsmRjJJ-DJQ3tyOiXgXaRCidL05_zkfLSzryqdo6dJUukHmOLySfcG7uJjor_mdN--znIoQ8ndZZTAahdAbMwmquzMoFRQyTkyxV)
+[Диаграмма контекста (As-Is)](/diagrams/context/Warmhouse_Context_As-Is.puml)
 
 
 # Задание 2. Проектирование микросервисной архитектуры
 
 В этом задании вам нужно предоставить только диаграммы в модели C4. Мы не просим вас отдельно описывать получившиеся микросервисы и то, как вы определили взаимодействия между компонентами To-Be системы. Если вы правильно подготовите диаграммы C4, они и так это покажут.
 
+**Диаграмма контекста (Context)**
+
+[Диаграмма контекста (To-Be)](/diagrams/context/Warmhouse_Context_To-Be.puml)
+
 **Диаграмма контейнеров (Containers)**
 
-Добавьте диаграмму.
+[Диаграмма контейнеров](/diagrams/container/Warmhouse_Container.puml)
 
 **Диаграмма компонентов (Components)**
 
-Добавьте диаграмму для каждого из выделенных микросервисов.
+[Диаграмма компонента - Сервис API Gateway](/diagrams/component/Warmhouse_Component.puml)
 
 **Диаграмма кода (Code)**
 
-Добавьте одну диаграмму или несколько.
+[Диаграмма кода - Сервис API Gateway](/diagrams/code/Warmhouse_Code.puml)
 
 # Задание 3. Разработка ER-диаграммы
 

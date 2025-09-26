@@ -1,0 +1,165 @@
+openapi: 3.0.0
+info:
+  title: Smart Home API
+  description: API для системы управления умным домом.
+  version: 1.0.0
+servers:
+  - url: https://api.smarthome.example.com/v1
+    description: Основной сервер API
+
+paths:
+  /auth/login:
+    post:
+      summary: Аутентификация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  example: securepassword
+      responses:
+        '200':
+          description: Успешная аутентификация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIs...
+        '401':
+          description: Неверные учетные данные
+
+  /devices:
+    get:
+      summary: Получить список устройств
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список устройств
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "device123"
+                    name:
+                      type: string
+                      example: "Умная лампа"
+                    status:
+                      type: string
+                      example: "включено"
+
+    post:
+      summary: Добавить новое устройство
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Умный термометр"
+                type:
+                  type: string
+                  example: "thermostat"
+      responses:
+        '201':
+          description: Устройство успешно добавлено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "device124"
+
+  /devices/{deviceId}/status:
+    patch:
+      summary: Изменить статус устройства
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: deviceId
+          required: true
+          schema:
+            type: string
+          description: ID устройства
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  example: "выключено"
+      responses:
+        '200':
+          description: Статус устройства обновлен
+        '404':
+          description: Устройство не найдено
+
+  /automation:
+    post:
+      summary: Создание сценария автоматизации
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Утренний сценарий"
+                actions:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      deviceId:
+                        type: string
+                        example: "device123"
+                      action:
+                        type: string
+                        example: "turn_on"
+      responses:
+        '201':
+          description: Сценарий автоматизации создан
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "automation123"
+
+securitySchemes:
+  bearerAuth:
+    type: http
+    scheme: bearer
+    bearerFormat: JWT

@@ -1,0 +1,42 @@
+@startuml API Gateway (Python) - code diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4.puml
+
+class RestApiLayer {
+    +handle_request(path: str, method: str, headers: dict, body: dict) : Response
+    -auth: AuthModule
+    -router: Router
+}
+
+class AuthModule {
+    +verify_token(token: str) : Claims
+    +require_scopes(claims: Claims, scopes: list[str]) : bool
+}
+
+class Router {
+    +route(path: str, method: str) : Controller
+    +dispatch(ctrl: Controller, body: dict, claims: Claims) : Response
+}
+
+interface Controller {
+    +handle(body: dict, claims: Claims) : Response
+}
+
+class IAMController {
+    +handle(body: dict, claims: Claims) : Response
+}
+
+class DeviceController {
+    +handle(body: dict, claims: Claims) : Response
+}
+
+class PaymentsController {
+    +handle(body: dict, claims: Claims) : Response
+}
+
+RestApiLayer --> AuthModule
+RestApiLayer --> Router
+Router ..> Controller
+Router --> IAMController
+Router --> DeviceController
+Router --> PaymentsController
+@enduml

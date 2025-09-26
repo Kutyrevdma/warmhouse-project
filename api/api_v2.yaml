@@ -1,0 +1,298 @@
+openapi: 3.1.0
+info:
+  title: WarmHome Public API
+  version: 1.0.0
+  description: |
+    REST-контракты для управления устройствами и чтения телеметрии.
+servers:
+  - url: https://api.warmhome.example.com/v1
+security:
+  - bearerAuth: []
+
+paths:
+  /devices/{id}:
+    get:
+      summary: Получить устройство
+      tags: [Devices]
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      responses:
+        '200':
+          description: Устройство найдено
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Device' }
+              examples:
+                ok:
+                  value:
+                    id: 1
+                    serial_number: "ABC123"
+                    status: "online"
+                    type:
+                      id: 2
+                      name: "Thermostat"
+                    house_id: 10
+        '404': { $ref: '#/components/responses/NotFound' }
+
+    patch:
+      summary: Обновить атрибуты устройства (частично)
+      tags: [Devices]
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                status:
+                  type: string
+                  enum: [online, offline, error, maintenance]
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Обновлено
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Device' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /devices/{id}/commands:
+    post:
+      summary: Отправить команду устройству (идемпотентно)
+      description: |
+        Используйте заголовок `Idempotency-Key` для избежания повторного выполнения при ретраях.
+        Сервис возвращает **квитанцию приёма**; результат исполнения приходит асинхронно (событие `command.executed`).
+      tags: [Devices]
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CommandRequest' }
+            examples:
+              turn_on:
+                value: { command: "turn_on", params: {} }
+              set_temperature:
+                value: { command: "set_temperature", params: { value: 22.5 } }
+      responses:
+        '202':
+          description: Принято к исполнению
+          headers:
+            Idempotency-Key:
+              schema: { type: string }
+              description: Эхо присланного ключа.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommandAccepted' }
+              examples:
+                accepted:
+                  value:
+                    command_id: "cmd_7f8a2"
+                    device_id: 1
+                    accepted_at: "2025-09-25T13:20:10Z"
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /devices/{id}/telemetry:
+    get:
+      summary: Получить телеметрию устройства
+      tags: [Telemetry]
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Ок
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TelemetryPage' }
+              examples:
+                page:
+                  value:
+                    items:
+                      - timestamp: "2025-09-25T10:00:00Z"
+                        value: 23.5
+                        metric: "temperature"
+                      - timestamp: "2025-09-25T11:00:00Z"
+                        value: 24.0
+                        metric: "temperature"
+                    next_cursor: "eyJ0IjoiMjAyNS0wOS0yNVQxMTowMDowMFoifQ=="
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /houses/{id}:
+    get:
+      summary: Получить дом и его устройства
+      tags: [Houses]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Ок
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HouseWithDevices' }
+              examples:
+                ok:
+                  value:
+                    id: 10
+                    address: "ул. Лесная, 5"
+                    region: "SPB"
+                    devices:
+                      - id: 1
+                        serial_number: "ABC123"
+                        status: "online"
+                        type: { id: 2, name: "Thermostat" }
+                      - id: 2
+                        serial_number: "XYZ789"
+                        status: "offline"
+                        type: { id: 3, name: "LightSwitch" }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    DeviceId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    From:
+      name: from
+      in: query
+      schema: { type: string, format: date-time }
+      description: ISO8601, включительно
+    To:
+      name: to
+      in: query
+      schema: { type: string, format: date-time }
+      description: ISO8601, исключая верхнюю границу
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+      description: Токен постраничной навигации
+
+  responses:
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          examples:
+            not_found:
+              value: { code: "not_found", message: "Device not found", trace_id: "a1b2c3" }
+    BadRequest:
+      description: Ошибка валидации/формата
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          examples:
+            bad:
+              value: { code: "bad_request", message: "Invalid field 'status'", trace_id: "a1b2c3" }
+
+  schemas:
+    DeviceType:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: string, nullable: true }
+
+    Device:
+      type: object
+      required: [id, serial_number, status, type, house_id]
+      properties:
+        id: { type: integer }
+        serial_number: { type: string }
+        status:
+          type: string
+          enum: [online, offline, error, maintenance]
+        type: { $ref: '#/components/schemas/DeviceType' }
+        house_id: { type: integer }
+        name: { type: string, nullable: true }
+
+    CommandRequest:
+      type: object
+      required: [command]
+      additionalProperties: false
+      properties:
+        command:
+          type: string
+          description: |
+            Примеры: "turn_on", "turn_off", "set_temperature"
+        params:
+          type: object
+          additionalProperties: true
+          description: Параметры команды (если нужны)
+
+    CommandAccepted:
+      type: object
+      required: [command_id, device_id, accepted_at]
+      properties:
+        command_id: { type: string }
+        device_id: { type: integer }
+        accepted_at: { type: string, format: date-time }
+
+    TelemetryItem:
+      type: object
+      required: [timestamp, value, metric]
+      properties:
+        timestamp: { type: string, format: date-time }
+        value: { type: number }
+        metric:
+          type: string
+          description: напр. temperature, humidity, motion, power
+
+    TelemetryPage:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/TelemetryItem' }
+        next_cursor:
+          type: string
+          nullable: true
+
+    HouseWithDevices:
+      type: object
+      required: [id, address, region, devices]
+      properties:
+        id: { type: integer }
+        address: { type: string }
+        region: { type: string }
+        devices:
+          type: array
+          items: { $ref: '#/components/schemas/Device' }
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        trace_id: { type: string }
