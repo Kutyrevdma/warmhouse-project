@@ -27,7 +27,34 @@ services:
     networks:
       - smarthome-network
     restart: unless-stopped
-
+  telemetry-service:
+    build:
+      context: ./telemetry-service
+    container_name: telemetry-service
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - smarthome-network
+    restart: unless-stopped
+  devices-service:
+    build:
+      context: ./devices-service
+    container_name: devices-service
+    ports:
+      - "8083:8083"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - smarthome-network
+    restart: unless-stopped
   app:
     build:
       context: ./smart_home
@@ -36,7 +63,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      temperature-api:
+      telemetry-service:
+        condition: service_started
+      devices-service:
         condition: service_started
     env_file:
       - .env
