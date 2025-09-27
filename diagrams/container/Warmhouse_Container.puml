@@ -1,0 +1,102 @@
+@startuml
+
+title Диаграмма контейнеров
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+' Актеры
+Person(user, "Пользователь", "Управляет домом через Веб-интерфейс/мобильный клиент.")
+Person(administrator, "Администратор", "Поддержка и администрирование платформы.")
+
+' Внутренние системы на стороне SaaS
+Container_Boundary(systemHouse, " «Тёплый дом»", "Платформа умного дома (SaaS)") {
+    
+    ' API/Gateway
+    Container(apiGateway, "Внутренний Api", "FastAPI", "Единая точка входа, аутентификация, маршрутизация к сервисам")
+
+    ' Клиентское приложение
+    Container(webUserApp, "Web-приложение", "Flask", "Web-приложение для взаимодействия с пользователем")
+    Container(mobileUserApp, "Мобильное приложение", "Kotlin/Swift", "Мобильное-приложение для взаимодействия с пользователем")
+    Container(webAdminApp, "Web-приложение", "Flask", "Web-приложение для взаимодействия с администраторами/модераторами")
+    
+    ' Внутренние доменные сервисы
+    Container(deviceControl, "Сервис управления устройствами", "FastAPI", "Приём команд, выдача команд устройствам, статусы")
+    Container(deviceRulesSchedules, "Сервис правил и расписаний", "FastAPI + Celery Beat", "Правила «если -> то», сценарии, планировщик, запуск/выполнение")
+    Container(deveicesCenarioTemplates, "Сервис шаблонов сценариев", "FastAPI", "Каталог/импорт шаблонов сценариев")
+    Container(deveiceNotifications, "Сервис уведомлений", "FastAPI", "Каналы email/SMS/push")
+    Container(deviceTelemetry, "Сервис телеметрии", "FastAPI", "Приём/нормализация телеметрии, агрегаты для UI")
+
+    Container(iam, "Сервис доступа (IAM)", "FastAPI + OAuth2/JWT", "Пользователи, роли, выдача токенов")
+    Container(subscriptions, "Сервис подписок", "FastAPI", "Планы, подписки и модули")
+    Container(payments, "Сервис платежей", "FastAPI", "Обработка платёжного провайдера")
+
+    ContainerQueue(broker, "Брокер сообщений","RabbitMQ", "Обмен сообщениями между сервисами")
+    ContainerDb(db, "База данных", "PostgreSQL", "Пользователи, устройства, правила, команды, подписки, платежи")
+    ContainerDb(tsdb, "База телеметрии", "InfluxDB", "Временные ряды датчиков")
+
+}
+
+' Внутренние системы на стороне клиента
+Container_Boundary(systemHouseClient, "Умный дом на стороне клиента") {
+    System(hub, "Хаб", "Zigbee, Wi-Fi, Bluetooth, Z-Wave, Matter", "Центральное устройство объединяет устройства и передаёт в облако")
+    System(device, "Устройства", "Термостаты, реле, камеры, ворота", "Умные устройства, подключённые к хабу")
+}
+
+
+' Внешние системы
+System_Ext(smsGateway,"SMS-провайдер", "SMS API", "Отправка SMS-уведомлений")
+System_Ext(pushProvider,"Push-провайдер", "FCM/APNs", "Доставка push-уведомлений на мобильные устройства")
+System_Ext(emailProvider,"Почтовый провайдер", "SMTP/REST API", "Отправка e-mail сообщений")
+System_Ext(paymentGateway,"Платёжный провайдер", "HTTPS API","Обработка оплат и подписок")
+
+
+' Пользователи → UI
+Rel(user, webUserApp, "Вход и управление устройствами", "HTTPS")
+Rel(user, mobileUserApp, "Вход и управление устройствами", "HTTPS")
+Rel(administrator, webAdminApp, "Администрирование", "HTTPS")
+
+' UI → API
+Rel(webUserApp, apiGateway, "Управление устройствами, подключение новых, настройка сценариев автоматизации, оплата подписки", "HTTPS")
+Rel(mobileUserApp, apiGateway, "Управление устройствами, подключение новых, настройка сценариев автоматизации, оплата подписки", "HTTPS")
+Rel(webAdminApp, apiGateway, "Управление устройствами, подключение новых, настройка сценариев автоматизации, оплата подписки", "HTTPS")
+
+' API ---> Доменные сервисы
+Rel(apiGateway, iam, "AuthN/AuthZ, выдача JWT", "REST/gRPC")
+Rel(apiGateway, deviceControl, "IssueCommand, GetStatus", "REST/gRPC")
+Rel(apiGateway, deviceRulesSchedules, "CRUD правил/расписаний/сцен", "REST")
+Rel(apiGateway, deveicesCenarioTemplates, "Список/импорт шаблонов", "REST")
+Rel(apiGateway, deviceTelemetry, "Агрегаты/серии телеметрии", "REST")
+Rel(apiGateway, subscriptions, "CRUD подписок, проверка entitlements", "REST")
+Rel(apiGateway, payments, "Создать инвойс/ссылка на оплату", "REST")
+
+' --- Сервисы → БД
+Rel(iam, db, "Хранение данных о пользователях, ролях и токенах", "R/W")
+Rel(deviceControl, db, "Хранение данных об устройствах и их статусах", "R/W")
+Rel(deviceRulesSchedules, db, "Хранение правил, расписаний и сценариев", "R/W")
+Rel(deveicesCenarioTemplates, db, "Хранение шаблонов сценариев", "R/W")
+Rel(subscriptions, db, "Хранение подписок и лимитов", "R/W")
+Rel(payments, db, "Хранение транзакций и статусов оплат", "R/W")
+
+' --- Телеметрия → TSDB
+Rel(deviceTelemetry, tsdb, "Хранение и выборка временных рядов телеметрии от устройств", "Write/Query")
+
+' --- Асинхронные события через брокер
+Rel(deviceRulesSchedules, broker, "Публикует события по правила/сценария", "events")
+Rel(deviceTelemetry, broker, "Публикует события от датчиков", "events")
+
+Rel(broker, deviceControl, "Передаёт команды и статусы устройства", "events")
+Rel(broker, deveiceNotifications, "Передаёт доменные события для уведомлений", "events")
+
+' --- Интеграции вовне (инициаторы: профильные сервисы)
+Rel(deveiceNotifications, smsGateway, "Отправка SMS", "SMS API")
+Rel(deveiceNotifications, pushProvider, "Отправка push", "FCM/APNs")
+Rel(deveiceNotifications, emailProvider, "Отправка e-mail", "SMTP/REST")
+Rel(payments, paymentGateway, "Создание платежа", "HTTPS API")
+Rel(paymentGateway, payments, "Вебхуки статусов", "HTTPS")
+
+' --- Дом пользователя: команды и телеметрия
+Rel(deviceControl, hub, "Команды/Статусы", "MQTT/HTTP/WebSocket")
+Rel_U(device, hub, "Телеметрия/события")
+Rel(hub, deviceTelemetry, "Поток телеметрии", "MQTT/HTTP/WebSocket")
+
+@enduml

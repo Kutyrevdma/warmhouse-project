@@ -1,0 +1,48 @@
+@startuml
+
+entity User {
+  *id : int
+  --
+  name : string
+  email : string
+  password_hash : string
+}
+
+entity House {
+  *id : int
+  --
+  address : string
+  region : string
+}
+
+entity Device {
+  *id : int
+  --
+  serial_number : string
+  status : string
+  type_id : int
+  house_id : int
+}
+
+entity DeviceType {
+  *id : int
+  --
+  name : string
+  description : string
+}
+
+entity TelemetryData {
+  *id : int
+  --
+  timestamp : datetime
+  value : float
+  device_id : int
+}
+
+' Связи
+User ||--o{ House : 1:N
+House ||--o{ Device : 1:N
+Device }o--|| DeviceType : N:1
+Device ||--o{ TelemetryData : 1:N
+
+@enduml

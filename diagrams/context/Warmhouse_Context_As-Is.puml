@@ -1,0 +1,23 @@
+@startuml
+
+title Контекстная диаграмма (As-Is)
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+' Актеры
+Person(user, "Пользователь", "Управляет отоплением в доме")
+Person(worker, "Специалист по настройке", "Настраивает систему отопления")
+
+' Внутренние системы
+System(houseServer, "Система Умный дом", "Система управления отоплением")
+
+' Внешние системы
+System(heatingSystem, "Система отопления", "Система для отопления дома")
+
+' Связи
+Rel(houseServer, heatingSystem, "Опрашивает температуру, включает/выключает отопление")
+
+Rel(user, houseServer, "Управляет отоплением, смотрит температуру")
+Rel(worker, heatingSystem, "Подключает и настраивает")
+
+@enduml
