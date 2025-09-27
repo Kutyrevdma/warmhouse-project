@@ -1,0 +1,389 @@
+openapi: 3.0.0
+
+info:
+  title: Warmhouse Devices API
+  version: 1.0.0
+  description: |
+    **REST API** экосистемы «Тёплый дом».
+
+    ### Доменная область
+    - **Система управления умным домом**
+      - **Управление устройствами (реестр)** — регистрация/чтение/обновление устройств.
+      - **Мониторинг устройств (телеметрия)** — получение последних показаний и исторических данных.
+      - **Автоматизация сценариев (правила и расписания)** — создание/запуск сцен, расписания.
+    - **Управление пользователями и подписками**
+      - **Управление пользователями и доступом (IAM)** — аутентификация (JWT), авторизация.
+
+    ### Ключевые возможности
+    - Регистрация и управление устройствами.
+    - Отправка команд устройствам.
+    - Доступ к телеметрии.
+    - Создание и запуск сценариев.
+    - Аутентификация пользователей.
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Основной сервер API 
+
+tags:
+
+  - name: Auth
+    description: >
+      Управление пользователями и доступом.
+      
+  - name: Devices
+    description: >
+      Управление устройствами умного дома:
+      регистрация, просмотр, обновление и отправка команд.
+
+  - name: Telemetry
+    description: >
+      Получение телеметрии устройств:
+      последние значения и исторические данные.
+
+
+
+paths:
+  /devices:
+    get:
+      summary: Список устройств (реестр)
+      description: |
+        **Возвращает коллекцию устройств из реестра**
+
+        Поля соответствуют ER-модели:
+
+        ```text
+        id              — уникальный идентификатор
+        serial_number   — серийный номер
+        status          — текущее состояние (online/offline/error)
+        type_id         — ссылка на тип устройства
+        house_id        — идентификатор дома
+        ```
+      tags: [Devices]
+      responses:
+        '200':
+          description: Успешное получение списка устройств
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:            { type: integer }
+                    serial_number: { type: string }
+                    status:        { type: string }
+                    type_id:       { type: integer }
+                    house_id:      { type: integer }
+              examples:
+                ok:
+                  value:
+                    - id: 1
+                      serial_number: "A001"
+                      status: "online"
+                      type_id: 2
+                      house_id: 10
+                    - id: 2
+                      serial_number: "A002"
+                      status: "offline"
+                      type_id: 3
+                      house_id: 10
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+              examples:
+                server-error:
+                  value: { "error": "База данных недоступна" }
+    post:
+      summary: Зарегистрировать новое устройство
+      description: |
+        **Создаёт запись устройства в реестре.**
+
+        Поля запроса:
+
+        ```json
+        {
+          "serial_number": "A003",
+          "type_id": 2,
+          "house_id": 10,
+          "status": "offline"
+        }
+        ```
+      tags: [Devices]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [serial_number, type_id, house_id]
+              properties:
+                serial_number: { type: string}
+                type_id:       { type: integer}
+                house_id:      { type: integer}
+                status:
+                  type: string
+                  description: Доступные значения online/offline/error
+                  enum: [online, offline, error]
+            examples:
+              valid:
+                value:
+                  serial_number: "A003"
+                  type_id: 2
+                  house_id: 10
+                  status: "offline"
+      responses:
+        '201':
+          description: Устройство успешно создано
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:            { type: integer}
+                  serial_number: { type: string}
+                  status:        { type: string}
+                  type_id:       { type: integer}
+                  house_id:      { type: integer}
+              examples:
+                created:
+                  value:
+                    id: 3
+                    serial_number: "A003"
+                    status: "offline"
+                    type_id: 2
+                    house_id: 10
+        '400':
+          description: Ошибка валидации входных данных
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:   { type: string }
+                  details: { type: object }
+              examples:
+                missing-field:
+                  value:
+                    error: "Bad Request"
+                    details: { "serial_number": "Обязательно указать" }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+              examples:
+                server-error:
+                  value: { "error": "База данных недоступна" }
+  /devices/{id}:
+    get:
+      summary: Получить одно устройство из реестра
+      description: |
+        **Возвращает объект устройства из реестра**
+        
+        Поля соответствуют ER-модели:
+
+        ```text
+        id              — уникальный идентификатор
+        serial_number   — серийный номер
+        status          — текущее состояние (online/offline/error)
+        type_id         — ссылка на тип устройства
+        house_id        — идентификатор дома
+        ```
+      tags: [Devices]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+          description: Уникальный идентификатор устройства
+      responses:
+        '200':
+          description: Устройство найдено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:            { type: integer }
+                  serial_number: { type: string }
+                  status:        { type: string }
+                  type_id:       { type: integer }
+                  house_id:      { type: integer }
+              examples:
+                ok:
+                  value:
+                    id: 1
+                    serial_number: "A001"
+                    status: "online"
+                    type_id: 2
+                    house_id: 10
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+              examples:
+                not-found:
+                  value: { "error": "Устройство с id=-1 не найдено" }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+              examples:
+                server-error:
+                  value: { "error": "База данных недоступна" }
+  /sensors/{id}/telemetry:
+    get:
+      summary: История телеметрии сенсора
+      description: |
+        **Возвращает список показаний телеметрии для выбранного сенсора.**
+
+        Поля соответствуют ER-модели:
+
+        ```text
+        id        
+        timestamp 
+        value     
+        device_id 
+        ```
+      tags: [Telemetry]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+          description: Уникальный идентификатор сенсора
+      responses:
+        '200':
+          description: Список телеметрии
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:        { type: integer}
+                    timestamp: { type: string}
+                    value:     { type: number}
+                    device_id: { type: integer}
+              examples:
+                ok:
+                  value:
+                    - id: 101
+                      timestamp: "2025-09-27T18:40:00Z"
+                      value: 22.5
+                      device_id: 1
+                    - id: 102
+                      timestamp: "2025-09-27T18:50:00Z"
+                      value: 22.7
+                      device_id: 1
+        '404':
+          description: Сенсор не найден
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+              examples:
+                not-found:
+                  value: { "error": "Сенсор с id=-1 не найден" }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+              examples:
+                server-error:
+                  value: { "error": "База данных недоступна" }
+  /auth/register:
+    post:
+      summary: Регистрация пользователя
+      description: |
+        **Создаёт нового пользователя.**
+
+        Поля соответствуют ER-модели:
+
+        ```text
+        Поля запроса:
+        - name — имя
+        - email — уникальный адрес
+        - password — пароль
+        ```
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:     { type: string }
+                email:    { type: string }
+                password: { type: string }
+            examples:
+              valid:
+                value:
+                  name: "Иван Петров"
+                  email: "ivan.petrov@yahoo.com"
+                  password: "qwerty123!@#"
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:    { type: integer}
+                  name:  { type: string }
+                  email: { type: string }
+              examples:
+                created:
+                  value:
+                    id: 1
+                    name: "Иван Петров"
+                    email: "ivan.petrov@yahoo.com"
+        '400':
+          description: Некорректные данные
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+              examples:
+                duplicate-email:
+                  value: { "error": "Пользователь с таким email уже существует" }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+              examples:
+                server-error:
+                  value: { "error": "База данных недоступна" }

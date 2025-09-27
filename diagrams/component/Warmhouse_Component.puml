@@ -1,0 +1,24 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Диаграмма компонентная. Сервис API Gateway
+
+Container_Boundary(apiGateway, "API Gateway") {
+
+  Component(restApi, "REST API Layer", "FastAPI", "Обрабатывает HTTP-запросы от Web/Mobile клиентов и Web администраторов")
+  Component(authModule, "Auth Module", "OAuth2/JWT", "Проверка токенов, права доступа")
+  Component(router, "Router", "FastAPI Routing", "Маршрутизация запросов к нужным доменным сервисам")
+  Component(apiAdapterIAM, "IAM Controller", "REST/gRPC Client", "Запросы к сервису IAM")
+  Component(apiAdapterDevices, "Device Controller", "REST/gRPC Client", "Запросы к сервису управления устройствами")
+  Component(apiAdapterPayments, "Payments Controller", "REST/gRPC Client", "Запросы к сервису платежей")
+  Component(logging, "Logging & Monitoring", "Prometheus/ELK", "Метрики, логи")
+
+}
+
+Rel(restApi, authModule, "Проверка токена")
+Rel(restApi, router, "Передаёт запрос")
+Rel(router, apiAdapterIAM, "Маршрутизация Auth/Users")
+Rel(router, apiAdapterDevices, "Маршрутизация Device API")
+Rel(router, apiAdapterPayments, "Маршрутизация Payments API")
+Rel(restApi, logging, "Записывает логи и метрики")
+@enduml
